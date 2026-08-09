@@ -60,6 +60,7 @@ file inventory.
 | [`kb/`](kb/) | Curated local facts used for retrieval-backed verification |
 | [`logs/`](logs/) | Runtime event logs; generated log files are not source documentation |
 | [`outputs/`](outputs/) | Generated JSON and Markdown episode analyses |
+| [`scripts/`](scripts/) | Standalone deliverable validation and repository utilities |
 | [`tests/`](tests/) | Unit and behavior tests |
 | [`.github/`](.github/) | Dependency automation and GitHub repository configuration |
 | [`.github/workflows/`](.github/workflows/) | CI, rubric, tagging, and release workflows |
@@ -284,6 +285,7 @@ Run the fast checks:
 python -m ruff check app tests
 python -m ruff format --check app tests
 python -m pytest -q
+python scripts/validate_deliverables.py
 ```
 
 Or use the corresponding Make targets:
