@@ -1,55 +1,37 @@
-# AWS deployment strategy
-
-This is the submission deployment strategy and intentionally stays below the
-assignment's 500-word maximum. Extended design notes are available in
-[`production_architecture_notes.md`](production_architecture_notes.md).
+# AWS Deployment Strategy
 
 ## Architecture
 
-Package the existing application as a versioned container in Amazon ECR. Podcast
-transcripts arrive in an encrypted, versioned S3 input bucket. S3 events route
-through EventBridge to an SQS queue, which decouples uploads from processing and
-provides back-pressure. An ECS Fargate worker consumes one episode per job, invokes
-Amazon Bedrock or another approved model through the existing provider interface,
-checks extracted claims against a curated retrieval service, and writes JSON and
-Markdown results to an S3 output bucket.
+The production version of the podcast agent would run as an asynchronous, containerized workload on AWS. Podcast transcripts would be uploaded to Amazon S3, which would publish an event to Amazon EventBridge or directly to Amazon SQS. SQS would act as the durable work queue between ingestion and processing.
 
-DynamoDB stores the transcript hash, pipeline version, status, and output location
-for idempotency. CloudWatch receives structured logs, metrics, dashboards, and
-alarms. Secrets Manager stores external-provider credentials; task roles grant only
-the S3, SQS, DynamoDB, model, and logging permissions each worker requires.
+The agent container would run on Amazon ECS using AWS Fargate. Each task would process one podcast episode: parse the transcript, generate the summary and editorial notes, extract factual claims, retrieve supporting evidence, perform verification, and write JSON/Markdown results back to S3.
 
-## Cost
+For model inference, the application would use Amazon Bedrock rather than operating local Ollama infrastructure in production. The existing provider abstraction would allow Bedrock to be added without changing the core orchestration workflow. A production knowledge base could be stored in Amazon OpenSearch, S3, or another retrieval service depending on data volume and search requirements.
 
-Fargate avoids idle server cost and scales to zero when the queue is empty. S3, SQS,
-and DynamoDB remain inexpensive at assignment-scale volume. Model inference will be
-the largest variable cost, so record tokens and estimated cost per episode, enforce
-prompt and response limits, deduplicate jobs by transcript hash, and cache successful
-retrieval and inference stages. Use a lower-cost model for routine summarization and
-reserve stronger models for ambiguous claim extraction. At sustained high volume,
-compare Fargate with ECS on EC2 and on-demand inference with provisioned throughput
-using measured utilization.
+Application logs, latency metrics, error counts, and processing metrics would be sent to Amazon CloudWatch.
 
 ## Scalability
 
-Scale stateless Fargate workers from SQS queue depth and oldest-message age. Set a
-maximum task count based on model-provider quotas and downstream capacity. SQS
-absorbs traffic spikes, while per-episode jobs allow horizontal scaling without
-cross-episode state. If summarization and verification develop different latency or
-resource profiles, separate them into independently scaled queues and workers while
-storing intermediate results in S3 or DynamoDB.
+Podcast episodes are independent processing units, making the workload naturally parallel. ECS services or Fargate tasks could autoscale based on SQS queue depth, message age, and average processing latency.
 
-## Fault tolerance
+SQS provides buffering during traffic spikes so ingestion does not depend on immediate worker availability. Scaling limits should also account for Bedrock model quotas and downstream retrieval capacity rather than increasing workers without bound.
 
-Set the SQS visibility timeout above normal processing time and extend it for healthy
-long-running jobs. Use bounded exponential backoff with jitter for throttling and
-transient provider errors. After a small retry limit, send failed jobs to a dead-letter
-queue for reviewed replay.
+For larger transcripts, preprocessing and chunking could reduce prompt size and allow summarization or claim extraction stages to run independently.
 
-Make output keys deterministic and use DynamoDB conditional writes so retries cannot
-publish duplicate results. Checkpoint successful expensive stages so a retry does not
-repeat completed inference. Distinguish retryable transport failures from permanent
-input/schema failures. Alarm on dead-letter depth, oldest-message age, error rate,
-latency, provider throttling, and missing outputs. Encrypt data with KMS, avoid putting
-transcript text in queue messages, redact sensitive log fields, and apply explicit S3
-and CloudWatch retention policies.
+## Fault Tolerance
+
+SQS would provide durable message delivery and retry behavior. Failed processing attempts would use exponential backoff and eventually move to a dead-letter queue for inspection.
+
+Each episode would have an idempotency key based on its episode ID or transcript hash so retries do not produce duplicate processing or unnecessary model charges.
+
+Intermediate processing state could be persisted so a failure during fact-checking does not require repeating successful summarization work. External model and retrieval calls would use timeouts, bounded retries, and structured error logging.
+
+S3 versioning and durable output storage would protect generated artifacts from accidental overwrite or loss.
+
+## Cost
+
+The primary variable cost is model inference. Costs would be controlled through model selection, prompt-size limits, transcript chunking, caching, and avoiding duplicate processing.
+
+Fargate is appropriate because workers only consume compute while jobs are running and does not require maintaining EC2 instances. S3 and SQS are relatively inexpensive for this workload and scale with usage.
+
+CloudWatch metrics would track token usage, processing latency, failures, and estimated cost per episode. This allows the agency to evaluate quality-versus-cost tradeoffs and route simpler workloads to cheaper models while reserving more capable models for difficult analysis or verification tasks.
