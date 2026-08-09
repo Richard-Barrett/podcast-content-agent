@@ -32,7 +32,8 @@ checks:
 - matching JSON and Markdown files for every input episode;
 - episode identity and title consistency;
 - 200-300 word summaries and exactly five takeaways;
-- non-empty quotes, topics, and fact checks;
+- quotes whose timestamp, speaker, and text exactly match a source transcript turn;
+- non-empty topics and fact checks;
 - bounded confidence values and populated verification fields;
 - required Markdown sections;
 - batch and per-episode lifecycle events when `--log` is supplied.

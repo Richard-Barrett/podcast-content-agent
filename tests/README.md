@@ -10,6 +10,7 @@ fact retrieval.
 | `test_agent.py` | Required output sections, 200-300 word summaries, and fallback after invalid model output |
 | `test_factcheck.py` | Known-fact retrieval and explicit unverifiable behavior for unknown claims |
 | `test_input.py` | JSON/text discovery, text metadata inference, normalization, and malformed-input handling |
+| `test_validator.py` | Independent deliverable checks, including exact quote provenance |
 
 ## Run the suite
 

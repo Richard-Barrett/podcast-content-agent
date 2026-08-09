@@ -83,8 +83,11 @@ def require_non_empty_string(
         errors.append(f"{path}: {field} must be a non-empty string")
 
 
-def expected_episodes(input_dir: Path, errors: list[str]) -> dict[str, str]:
-    episodes: dict[str, str] = {}
+def expected_episodes(
+    input_dir: Path,
+    errors: list[str],
+) -> dict[str, dict[str, Any]]:
+    episodes: dict[str, dict[str, Any]] = {}
     files = discover_input_files(input_dir)
     if not files:
         errors.append(f"No .json or .txt inputs found in {input_dir}")
@@ -107,7 +110,7 @@ def expected_episodes(input_dir: Path, errors: list[str]) -> dict[str, str]:
         if not isinstance(title, str) or not title.strip():
             errors.append(f"{path}: title must be a non-empty string")
             continue
-        episodes[episode_id] = title
+        episodes[episode_id] = episode
     return episodes
 
 
@@ -134,10 +137,24 @@ def validate_string_list(
             errors.append(f"{path}: {field}[{index}] must be a non-empty string")
 
 
-def validate_quotes(value: object, path: Path, errors: list[str]) -> None:
+def validate_quotes(
+    value: object,
+    path: Path,
+    errors: list[str],
+    transcript: object,
+) -> None:
     if not isinstance(value, list) or not value:
         errors.append(f"{path}: notable_quotes must be a non-empty list")
         return
+    if not isinstance(transcript, list):
+        errors.append(f"{path}: source transcript must be a list")
+        return
+
+    source_quotes = {
+        (turn.get("timestamp"), turn.get("speaker"), turn.get("text"))
+        for turn in transcript
+        if isinstance(turn, dict)
+    }
     for index, quote in enumerate(value):
         if not isinstance(quote, dict):
             errors.append(f"{path}: notable_quotes[{index}] must be an object")
@@ -148,6 +165,16 @@ def validate_quotes(value: object, path: Path, errors: list[str]) -> None:
                 f"notable_quotes[{index}].{field}",
                 path,
                 errors,
+            )
+        quote_key = (
+            quote.get("timestamp"),
+            quote.get("speaker"),
+            quote.get("text"),
+        )
+        if quote_key not in source_quotes:
+            errors.append(
+                f"{path}: notable_quotes[{index}] does not exactly match "
+                "a source transcript turn"
             )
 
 
@@ -180,7 +207,7 @@ def validate_fact_checks(value: object, path: Path, errors: list[str]) -> None:
 def validate_json_output(
     path: Path,
     episode_id: str,
-    expected_title: str,
+    expected_episode: dict[str, Any],
     errors: list[str],
 ) -> None:
     result = load_json(path, errors)
@@ -191,7 +218,7 @@ def validate_json_output(
 
     if result.get("episode_id") != episode_id:
         errors.append(f"{path}: episode_id must equal {episode_id!r}")
-    if result.get("title") != expected_title:
+    if result.get("title") != expected_episode["title"]:
         errors.append(f"{path}: title does not match the input episode")
 
     summary = result.get("summary")
@@ -211,7 +238,12 @@ def validate_json_output(
         errors,
         exact_length=5,
     )
-    validate_quotes(result.get("notable_quotes"), path, errors)
+    validate_quotes(
+        result.get("notable_quotes"),
+        path,
+        errors,
+        expected_episode["transcript"],
+    )
     validate_string_list(result.get("topics"), "topics", path, errors)
     validate_fact_checks(result.get("fact_checks"), path, errors)
 
@@ -321,11 +353,11 @@ def validate_deliverables(
 
     if not output_dir.is_dir():
         errors.append(f"Output directory does not exist: {output_dir}")
-    for episode_id, title in episodes.items():
+    for episode_id, episode in episodes.items():
         validate_json_output(
             output_dir / f"{episode_id}_analysis.json",
             episode_id,
-            title,
+            episode,
             errors,
         )
         validate_markdown_output(
