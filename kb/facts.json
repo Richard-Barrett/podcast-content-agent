@@ -1,0 +1,117 @@
+{
+  "facts": [
+    {
+      "fact": "GitLab, Automattic, and Doist are known for remote or distributed work practices and extensive documentation, but saying all three have literally written handbooks for everything is an overstatement.",
+      "aliases": [
+        "GitLab Automattic Doist literally written handbooks for everything employees guidance"
+      ],
+      "status": "⚠️ Possibly outdated/inaccurate",
+      "verification": "The underlying point about documented remote-work practices is supported, but the absolute wording 'literally written handbooks for everything' is too broad to verify as stated.",
+      "source": "local-kb:remote-work-000",
+      "confidence": 0.9
+    },
+    {
+      "fact": "GitLab is an all-remote company that publishes a public remote-work handbook and extensive documentation.",
+      "aliases": [
+        "GitLab handbook remote work documentation",
+        "GitLab written handbook"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB records GitLab as a well-known all-remote organization with a public handbook/documentation model.",
+      "source": "local-kb:remote-work-001",
+      "confidence": 0.95
+    },
+    {
+      "fact": "Automattic has a distributed workforce and has publicly documented remote/distributed work practices.",
+      "aliases": [
+        "Automattic remote distributed company documentation"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB supports the claim that Automattic operates with a distributed workforce; the stronger phrase 'handbooks for everything' is rhetorical.",
+      "source": "local-kb:remote-work-002",
+      "confidence": 0.9
+    },
+    {
+      "fact": "Doist is a remote-first company known for asynchronous communication and documentation practices.",
+      "aliases": [
+        "Doist async remote documentation"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB supports Doist as a remote-first company associated with asynchronous work practices.",
+      "source": "local-kb:remote-work-003",
+      "confidence": 0.89
+    },
+    {
+      "fact": "Hospitals and radiology workflows use AI-assisted systems to help interpret medical images such as X-rays and prioritize urgent cases.",
+      "aliases": [
+        "hospitals use AI reading X-rays flagging urgent cases",
+        "AI medical imaging triage"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB confirms real-world assistive AI use in medical imaging and prioritization; it does not imply clinician replacement.",
+      "source": "local-kb:health-ai-001",
+      "confidence": 0.96
+    },
+    {
+      "fact": "The US FDA reviews and regulates many AI-enabled medical devices and software functions when they meet medical-device definitions.",
+      "aliases": [
+        "FDA reviews AI healthcare systems",
+        "FDA regulatory barriers AI medical devices"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB confirms FDA oversight of qualifying AI/ML-enabled medical devices; the statement that 'full autonomy isn't happening anytime soon' is predictive rather than verifiable.",
+      "source": "local-kb:health-ai-002",
+      "confidence": 0.97
+    },
+    {
+      "fact": "The COVID-19 pandemic accelerated adoption of telehealth and digital-health tools, though the exact effect on AI adoption varies by segment.",
+      "aliases": [
+        "pandemic accelerated digital health adoption including AI tools"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB supports accelerated digital-health adoption during the pandemic; attributing the entire AI adoption trend to the pandemic would be too broad.",
+      "source": "local-kb:health-ai-003",
+      "confidence": 0.9
+    },
+    {
+      "fact": "A guest's statement that their bootstrapped SaaS reached break-even in 18 months is a personal anecdote without independent evidence in the supplied materials.",
+      "aliases": [
+        "SaaS no outside capital break-even 18 months total control"
+      ],
+      "status": "❓ Unverifiable",
+      "verification": "This is a first-person anecdote. The supplied transcript contains the statement but no independent evidence to validate the milestone.",
+      "source": "local-kb:founder-001",
+      "confidence": 0.45
+    },
+    {
+      "fact": "A guest's statement that an advised fintech startup achieved market leadership within two years after seed funding is not independently evidenced in the supplied materials.",
+      "aliases": [
+        "fintech startup raised seed market leadership within two years"
+      ],
+      "status": "❓ Unverifiable",
+      "verification": "The claim is too unspecific to validate because the company and market are not named.",
+      "source": "local-kb:founder-002",
+      "confidence": 0.4
+    },
+    {
+      "fact": "Clinical AI systems can inherit or amplify bias from skewed or non-representative healthcare training data, and health data privacy is a significant deployment concern.",
+      "aliases": [
+        "data privacy bias major hurdles AI existing clinical data may be skewed"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB supports both privacy risk and dataset-bias concerns in healthcare AI, while the severity varies by system and dataset.",
+      "source": "local-kb:health-ai-004",
+      "confidence": 0.94
+    },
+    {
+      "fact": "Healthcare organizations deploy symptom-checker and triage chatbot tools on websites and applications to guide users toward appropriate next steps.",
+      "aliases": [
+        "smart triage chatbots hospital websites apps helping patients next steps before doctor"
+      ],
+      "status": "✅ Verified true",
+      "verification": "The local KB supports patient-facing symptom-checking and triage tools, though capabilities and clinical oversight differ by deployment.",
+      "source": "local-kb:health-ai-005",
+      "confidence": 0.88
+    }
+  ]
+}

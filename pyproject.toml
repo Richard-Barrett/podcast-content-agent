@@ -1,0 +1,9 @@
+[project]
+name = "seekr-fde-podcast-agent"
+version = "0.1.0"
+description = "Agentic podcast analysis take-home for Seekr FDE"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

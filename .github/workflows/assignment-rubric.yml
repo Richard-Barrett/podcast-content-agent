@@ -1,0 +1,107 @@
+---
+name: "Assignment Rubric"
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rubric-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checked-in-deliverables:
+    name: Validate submission artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate checked-in outputs against assignment rubric
+        run: python scripts/validate_deliverables.py
+
+  deterministic-agent-run:
+    name: Generate and validate fresh outputs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run agent without external credentials
+        env:
+          MODEL_PROVIDER: heuristic
+        run: |
+          rm -rf .ci-outputs .ci-logs
+          python -m app.main \
+            --input data/input \
+            --output .ci-outputs \
+            --kb kb/facts.json \
+            --logs .ci-logs
+
+      - name: Validate freshly generated deliverables
+        run: |
+          python scripts/validate_deliverables.py \
+            --output .ci-outputs \
+            --log .ci-logs/agent.log
+
+      - name: Upload generated artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rubric-debug-artifacts
+          path: |
+            .ci-outputs/
+            .ci-logs/
+          if-no-files-found: ignore
+
+  docker-deliverable:
+    name: Validate Docker deliverable
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose --profile local-llm config --quiet
+
+      - name: Build submission image
+        run: docker build -t podcast-content-agent:rubric .
+
+      - name: Run Dockerized agent
+        run: |
+          mkdir -p .docker-outputs .docker-logs
+          docker run --rm \
+            -e MODEL_PROVIDER=heuristic \
+            -v "${PWD}/data/input:/app/data/input:ro" \
+            -v "${PWD}/kb:/app/kb:ro" \
+            -v "${PWD}/.docker-outputs:/app/outputs" \
+            -v "${PWD}/.docker-logs:/app/logs" \
+            podcast-content-agent:rubric \
+            --input data/input \
+            --output outputs \
+            --kb kb/facts.json \
+            --logs logs
+
+      - name: Validate Docker-generated deliverables
+        run: |
+          python scripts/validate_deliverables.py \
+            --output .docker-outputs \
+            --log .docker-logs/agent.log
