@@ -9,6 +9,7 @@ to inspect.
 | File | Responsibility |
 |---|---|
 | `main.py` | Parses CLI arguments, discovers inputs, runs the batch, writes outputs, and logs batch events |
+| `input.py` | Discovers and normalizes JSON or timestamped text transcripts into one episode contract |
 | `agent.py` | Orchestrates editorial analysis, validates model output, applies fallback behavior, and verifies claims |
 | `llm.py` | Adapts OpenAI-compatible chat completions and Ollama to a common JSON response |
 | `factcheck.py` | Retrieves the closest local fact and produces a scored verification |
@@ -21,6 +22,7 @@ to inspect.
 
 ```text
 main.main
+  -> discover_input_files / load_episode
   -> PodcastAgent.run_file
        -> LLMClient.complete_json (when configured)
        -> PodcastAgent._validate_llm_analysis
@@ -77,6 +79,7 @@ From the repository root:
 ```bash
 python -m app.main
 python -m app.main --input data/input/ep002_ai_healthcare.json
+python -m app.main --input path/to/timestamped_transcript.txt
 ```
 
 Run lint and tests after changes:
