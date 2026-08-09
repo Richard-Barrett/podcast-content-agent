@@ -89,6 +89,7 @@ jobs:
         run: |
           mkdir -p .docker-outputs .docker-logs
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
             -e MODEL_PROVIDER=heuristic \
             -v "${PWD}/data/input:/app/data/input:ro" \
             -v "${PWD}/kb:/app/kb:ro" \
