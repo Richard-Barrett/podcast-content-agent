@@ -25,7 +25,8 @@ python scripts/validate_deliverables.py \
   --log .ci-logs/agent.log
 ```
 
-The validator discovers expected episode IDs and titles from `data/input`, then
+The validator discovers expected episode IDs and titles from JSON and text inputs
+under `data/input`, then
 checks:
 
 - matching JSON and Markdown files for every input episode;
@@ -35,6 +36,7 @@ checks:
 - bounded confidence values and populated verification fields;
 - required Markdown sections;
 - batch and per-episode lifecycle events when `--log` is supplied.
+- the official AWS deployment response's 500-word maximum.
 
 The script uses only the Python standard library so assignment validation can run in
 GitHub Actions without installing project dependencies.

@@ -1,175 +1,55 @@
 # AWS deployment strategy
 
-## Goals
+This is the submission deployment strategy and intentionally stays below the
+assignment's 500-word maximum. Extended design notes are available in
+[`production_architecture_notes.md`](production_architecture_notes.md).
 
-The production design should preserve the current pipeline's strongest properties:
+## Architecture
 
-- one independently retryable job per episode;
-- stable input and output contracts;
-- provider-independent inference;
-- retrieval-backed verification rather than unsupported guessing;
-- observable, auditable processing;
-- no permanently running compute when the queue is empty.
+Package the existing application as a versioned container in Amazon ECR. Podcast
+transcripts arrive in an encrypted, versioned S3 input bucket. S3 events route
+through EventBridge to an SQS queue, which decouples uploads from processing and
+provides back-pressure. An ECS Fargate worker consumes one episode per job, invokes
+Amazon Bedrock or another approved model through the existing provider interface,
+checks extracted claims against a curated retrieval service, and writes JSON and
+Markdown results to an S3 output bucket.
 
-## Proposed architecture
+DynamoDB stores the transcript hash, pipeline version, status, and output location
+for idempotency. CloudWatch receives structured logs, metrics, dashboards, and
+alarms. Secrets Manager stores external-provider credentials; task roles grant only
+the S3, SQS, DynamoDB, model, and logging permissions each worker requires.
 
-```text
-Transcript producer
-      |
-      v
-S3 input bucket -- event --> EventBridge --> SQS input queue
-                                            |
-                                            v
-                                    ECS Fargate worker
-                                      |   |       |
-                                      |   |       +--> Bedrock / approved LLM
-                                      |   +----------> curated retrieval service
-                                      +--------------> DynamoDB job state
-                                            |
-                       +--------------------+--------------------+
-                       v                    v                    v
-                 S3 output bucket      CloudWatch          SQS DLQ
-```
+## Cost
 
-Package the existing application as a versioned Docker image in Amazon ECR. An S3
-object-created event routes through EventBridge to SQS. Workers can run as an
-auto-scaled ECS service or as one Fargate task per job. Queue depth controls
-concurrency and absorbs ingestion spikes without overloading model providers.
+Fargate avoids idle server cost and scales to zero when the queue is empty. S3, SQS,
+and DynamoDB remain inexpensive at assignment-scale volume. Model inference will be
+the largest variable cost, so record tokens and estimated cost per episode, enforce
+prompt and response limits, deduplicate jobs by transcript hash, and cache successful
+retrieval and inference stages. Use a lower-cost model for routine summarization and
+reserve stronger models for ambiguous claim extraction. At sustained high volume,
+compare Fargate with ECS on EC2 and on-demand inference with provisioned throughput
+using measured utilization.
 
-## Processing lifecycle
+## Scalability
 
-1. A producer writes a transcript to a versioned, encrypted S3 input bucket.
-2. EventBridge normalizes the event and sends a compact job envelope to SQS.
-3. A worker claims the message and creates or checks an idempotency record in
-   DynamoDB using the transcript hash plus pipeline version.
-4. The worker downloads the transcript and the selected prompt/KB configuration.
-5. Editorial analysis runs through Bedrock or another approved provider adapter.
-6. Extracted claims are checked against curated evidence.
-7. JSON, Markdown, and a manifest are written atomically to the output bucket.
-8. Metrics and structured events go to CloudWatch; the job record is marked
-   complete before the SQS message is deleted.
+Scale stateless Fargate workers from SQS queue depth and oldest-message age. Set a
+maximum task count based on model-provider quotas and downstream capacity. SQS
+absorbs traffic spikes, while per-episode jobs allow horizontal scaling without
+cross-episode state. If summarization and verification develop different latency or
+resource profiles, separate them into independently scaled queues and workers while
+storing intermediate results in S3 or DynamoDB.
 
-The manifest should record the input hash, container version, prompt version, model
-ID, knowledge-base snapshot, output-schema version, timestamps, and cost metadata.
+## Fault tolerance
 
-## Service choices
+Set the SQS visibility timeout above normal processing time and extend it for healthy
+long-running jobs. Use bounded exponential backoff with jitter for throttling and
+transient provider errors. After a small retry limit, send failed jobs to a dead-letter
+queue for reviewed replay.
 
-| Concern | AWS service | Rationale |
-|---|---|---|
-| Input and output objects | S3 | Durable, inexpensive, versioned object storage |
-| Event routing | EventBridge | Decouples object events from queue and worker details |
-| Back-pressure and retry | SQS | Visibility timeouts, redrive policy, queue-depth scaling |
-| Compute | ECS Fargate | Runs the existing image without managing hosts |
-| Image registry | ECR | Versioned private container distribution |
-| Model inference | Amazon Bedrock | Managed scaling and IAM-based access to approved models |
-| Job/idempotency state | DynamoDB | Conditional writes and low-maintenance keyed state |
-| Logs, metrics, alarms | CloudWatch | Central operational telemetry and alerting |
-| Secrets | Secrets Manager | Rotation and runtime retrieval of external-provider keys |
-| Encryption keys | KMS | Customer-managed encryption policy where required |
-
-For a small local knowledge base, store a versioned snapshot in S3 and load it when
-the task starts. At larger scale, move retrieval behind a service backed by
-OpenSearch Serverless, Aurora PostgreSQL with an approved vector extension, or a
-purpose-built curated search index. Preserve the current `Verification` response
-contract so orchestration and rendering remain unchanged.
-
-## Scaling
-
-Scale workers from SQS visible-message count and age of oldest message. Set a hard
-maximum task count based on provider quotas and downstream capacity. Use reserved
-concurrency or token-bucket admission control if model calls have strict rate
-limits.
-
-Keep workers stateless. If editorial analysis and fact verification develop
-different latency or resource profiles, split them into separate queues and worker
-services, with intermediate results stored in S3 or DynamoDB. This enables each
-stage to scale independently without redesigning the public output contract.
-
-## Reliability and recovery
-
-- Set the SQS visibility timeout above expected episode processing time and extend
-  it for healthy long-running jobs.
-- Use bounded exponential backoff with jitter for throttling and transient provider
-  failures.
-- Route messages to a DLQ after a small, explicit retry count.
-- Make writes idempotent and use deterministic object keys.
-- Store successful expensive stage results so retries can resume instead of paying
-  for inference again.
-- Distinguish retryable transport failures from permanent schema/input failures.
-- Alarm on DLQ depth, oldest-message age, error rate, p95 duration, throttling, and
-  missing output manifests.
-- Provide a reviewed DLQ replay procedure rather than automatically replaying
-  poison messages.
-
-The current local heuristic fallback can remain available for a degraded editorial
-mode, but production policy should decide which provider failures may use it and
-which require a retry or manual review.
-
-## Security and privacy
-
-- Use separate IAM task and execution roles with least-privilege access.
-- Encrypt S3, SQS, DynamoDB, logs, and secrets with KMS.
-- Block public S3 access and enforce TLS.
-- Use private subnets and VPC endpoints where required.
-- Retrieve external provider credentials from Secrets Manager at runtime.
-- Never place transcript text or secrets in queue messages; store object references.
-- Apply retention and deletion policies appropriate to customer and regulatory
-  requirements.
-- Redact or hash sensitive identifiers in logs.
-- Scan the image and pin approved base-image and dependency versions.
-- Record access with CloudTrail and protect production changes through reviewed
-  infrastructure-as-code deployments.
-
-Healthcare or other regulated transcripts require a separate data-classification
-review, provider eligibility check, and confirmation of contractual controls before
-processing.
-
-## Cost controls
-
-Model inference will usually dominate unit cost. Record input/output tokens, model,
-latency, retries, and estimated cost per episode. Use a lower-cost model for routine
-summarization and reserve stronger models for ambiguous extraction or review.
-
-Additional controls include:
-
-- deduplicating by transcript and pipeline hash;
-- caching retrieval and successful stage outputs;
-- setting prompt and response token limits;
-- batching only when it preserves per-episode failure isolation;
-- lifecycle-expiring temporary S3 objects and verbose logs;
-- scaling Fargate to zero when idle;
-- evaluating Fargate Spot for retry-safe, non-urgent queues;
-- using provisioned model throughput only after sustained utilization justifies it.
-
-At very high steady throughput, compare Fargate with ECS on EC2 and compare
-on-demand inference with provisioned throughput using measured workload data.
-
-## Delivery and environments
-
-Build the image once, scan it, and promote the same digest through development,
-staging, and production. Manage queues, buckets, roles, alarms, and task definitions
-with Terraform, AWS CDK, or CloudFormation.
-
-A safe release sequence is:
-
-1. Run lint, unit tests, schema checks, and deterministic end-to-end tests.
-2. Build and scan the container image.
-3. Deploy to staging and process a fixed evaluation corpus.
-4. Compare schema validity, summary quality, retrieval precision, latency, and cost.
-5. Deploy a canary worker revision with limited queue traffic.
-6. Promote gradually while monitoring alarms and output-quality metrics.
-7. Roll back by task-definition revision and preserve the manifest for audit.
-
-## Production readiness gaps
-
-Before implementing this architecture, add:
-
-- explicit JSON Schema validation for inputs and outputs;
-- prompt, model, KB, and output-schema versioning;
-- durable idempotency and checkpoint state;
-- provider retry and circuit-breaker policy;
-- evaluation datasets and quality thresholds;
-- provenance-rich external evidence connectors;
-- infrastructure as code and environment isolation;
-- dashboards, alerts, runbooks, and DLQ replay tooling;
-- data retention, deletion, and customer tenancy controls.
+Make output keys deterministic and use DynamoDB conditional writes so retries cannot
+publish duplicate results. Checkpoint successful expensive stages so a retry does not
+repeat completed inference. Distinguish retryable transport failures from permanent
+input/schema failures. Alarm on dead-letter depth, oldest-message age, error rate,
+latency, provider throttling, and missing outputs. Encrypt data with KMS, avoid putting
+transcript text in queue messages, redact sensitive log fields, and apply explicit S3
+and CloudWatch retention policies.

@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+input_module = importlib.import_module("app.input")
+discover_input_files = input_module.discover_input_files
+load_episode = input_module.load_episode
 
 REQUIRED_MARKDOWN_SECTIONS = (
     "## Summary",
@@ -23,13 +33,15 @@ REQUIRED_EPISODE_EVENTS = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate podcast-agent deliverables against the assignment contract."
+        description=(
+            "Validate podcast-agent deliverables against the assignment contract."
+        )
     )
     parser.add_argument(
         "--input",
         type=Path,
         default=Path("data/input"),
-        help="Directory containing the source episode JSON files.",
+        help="Directory containing source .json or .txt transcript files.",
     )
     parser.add_argument(
         "--output",
@@ -41,6 +53,12 @@ def parse_args() -> argparse.Namespace:
         "--log",
         type=Path,
         help="Optional agent log to validate for lifecycle events.",
+    )
+    parser.add_argument(
+        "--deployment",
+        type=Path,
+        default=Path("docs/deployment_strategy.md"),
+        help="Assignment deployment response, which must not exceed 500 words.",
     )
     return parser.parse_args()
 
@@ -67,16 +85,16 @@ def require_non_empty_string(
 
 def expected_episodes(input_dir: Path, errors: list[str]) -> dict[str, str]:
     episodes: dict[str, str] = {}
-    files = sorted(input_dir.glob("*.json")) if input_dir.is_dir() else []
+    files = discover_input_files(input_dir)
     if not files:
-        errors.append(f"No input JSON files found in {input_dir}")
+        errors.append(f"No .json or .txt inputs found in {input_dir}")
         return episodes
 
     for path in files:
-        episode = load_json(path, errors)
-        if not isinstance(episode, dict):
-            if episode is not None:
-                errors.append(f"{path}: input must be a JSON object")
+        try:
+            episode = load_episode(path)
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            errors.append(str(exc))
             continue
         episode_id = episode.get("episode_id")
         title = episode.get("title")
@@ -256,28 +274,47 @@ def validate_log(
 
     for episode_id in sorted(episode_ids):
         episode_events = {
-            event["event"]
-            for event in events
-            if event.get("episode_id") == episode_id
+            event["event"] for event in events if event.get("episode_id") == episode_id
         }
         for required in REQUIRED_EPISODE_EVENTS:
             if required not in episode_events:
                 errors.append(
                     f"{path}: episode {episode_id!r} is missing {required!r} event"
                 )
-        if not {
-            "heuristic_analysis_completed",
-            "llm_analysis_completed",
-        } & episode_events:
+        if (
+            not {
+                "heuristic_analysis_completed",
+                "llm_analysis_completed",
+            }
+            & episode_events
+        ):
             errors.append(
                 f"{path}: episode {episode_id!r} has no completed analysis event"
             )
+
+
+def validate_deployment_strategy(path: Path, errors: list[str]) -> None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        errors.append(f"Missing file: {path}")
+        return
+    except OSError as exc:
+        errors.append(f"Could not read {path}: {exc}")
+        return
+
+    word_count = len(re.findall(r"\b[\w][\w'/-]*\b", text, flags=re.UNICODE))
+    if word_count > 500:
+        errors.append(
+            f"{path}: deployment response exceeds 500 words; received {word_count}"
+        )
 
 
 def validate_deliverables(
     input_dir: Path,
     output_dir: Path,
     log_path: Path | None,
+    deployment_path: Path,
 ) -> list[str]:
     errors: list[str] = []
     episodes = expected_episodes(input_dir, errors)
@@ -298,12 +335,18 @@ def validate_deliverables(
 
     if log_path is not None:
         validate_log(log_path, set(episodes), errors)
+    validate_deployment_strategy(deployment_path, errors)
     return errors
 
 
 def main() -> int:
     args = parse_args()
-    errors = validate_deliverables(args.input, args.output, args.log)
+    errors = validate_deliverables(
+        args.input,
+        args.output,
+        args.log,
+        args.deployment,
+    )
     if errors:
         print(f"Deliverable validation failed with {len(errors)} error(s):")
         for error in errors:
