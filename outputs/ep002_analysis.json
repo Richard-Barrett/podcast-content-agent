@@ -1,46 +1,86 @@
 {
   "episode_id": "ep002",
   "title": "AI in Healthcare: Hype or Reality?",
-  "summary": "In this episode of Tech Health Today, David Chen discusses AI applications in healthcare with Dr. Priya Patel and Alex Moore. The conversation covers the use of AI for diagnostics and triage assistants, regulatory hurdles, data privacy and bias concerns, and future trends such as predictive diagnostics and interoperability.",
+  "summary": "AI in Healthcare: Hype or Reality? examines the episode's central question through a structured discussion between David Chen and Dr. Priya Patel, Alex Moore. Deep Dive: Priya, diagnostics and triage assistants have been touted as the next big thing. Are they actually in use? Yes. Some hospitals use AI for reading X-rays or flagging urgent cases. But it’s assistive, not replacing clinicians. And the regulatory barriers are huge. The FDA reviews these systems carefully, so full autonomy isn’t happening anytime soon.; Examples: So what’s a concrete example of something patients might see? Smart triage chatbots on hospital websites or apps, helping patients figure out next steps before seeing a doctor.; Challenges: Data privacy and bias are major hurdles. AI learns from existing clinical data, which may be skewed.; Trends: And yet, AI adoption continues. Why? Efficiency and clinician support. Hospitals want faster reads and fewer errors. Plus, the pandemic accelerated digital health adoption, including AI tools.; Future: So what’s next? Are we talking predictive diagnostics? Yes, AI copilots that suggest treatment plans, but a human will always make the final call. Interoperability is key. AI will work best when systems talk to each other securely. Thanks, Priya and Alex. And thanks to our listeners. AI is powerful, but cautious optimism is the way forward.",
   "top_takeaways": [
-    "AI is being used assistively in hospitals for reading X-rays and flagging urgent cases.",
-    "Regulatory barriers prevent full autonomy of AI systems in healthcare.",
-    "Hospitals are adopting AI to improve efficiency and clinician support.",
-    "Data privacy and bias are significant challenges for AI in healthcare.",
-    "Predictive diagnostics using AI is a future trend, but with human oversight."
+    "the regulatory barriers are huge. The FDA reviews these systems carefully, so full autonomy isn’t happening anytime soon.",
+    "Yes. Some hospitals use AI for reading X-rays or flagging urgent cases. But it’s assistive, not replacing clinicians.",
+    "Data privacy and bias are major hurdles. AI learns from existing clinical data, which may be skewed.",
+    "Yes, AI copilots that suggest treatment plans, but a human will always make the final call.",
+    "Interoperability is key. AI will work best when systems talk to each other securely."
   ],
   "notable_quotes": [
     {
-      "timestamp": "01:50",
-      "speaker": "Dr. Priya",
-      "text": "Smart triage chatbots on hospital websites or apps, helping patients figure out next steps before seeing a doctor."
+      "timestamp": "01:15",
+      "speaker": "Alex",
+      "text": "And the regulatory barriers are huge. The FDA reviews these systems carefully, so full autonomy isn’t happening anytime soon."
     },
     {
-      "timestamp": "02:50",
+      "timestamp": "00:55",
+      "speaker": "Dr. Priya",
+      "text": "Yes. Some hospitals use AI for reading X-rays or flagging urgent cases. But it’s assistive, not replacing clinicians."
+    },
+    {
+      "timestamp": "02:20",
       "speaker": "Alex",
       "text": "Data privacy and bias are major hurdles. AI learns from existing clinical data, which may be skewed."
+    },
+    {
+      "timestamp": "04:15",
+      "speaker": "Dr. Priya",
+      "text": "Yes, AI copilots that suggest treatment plans, but a human will always make the final call."
     }
   ],
   "topics": [
-    "AI in Healthcare",
-    "Regulatory Barriers",
-    "Data Privacy",
-    "Bias Issues"
+    "#DeepDive",
+    "#Challenges",
+    "#Trends",
+    "#Future",
+    "#Healthcare",
+    "#Hype"
   ],
   "fact_checks": [
     {
-      "claim": "Some hospitals use AI for reading X-rays or flagging urgent cases.",
+      "claim": "Yes. Some hospitals use AI for reading X-rays or flagging urgent cases. But it’s assistive, not replacing clinicians.",
       "status": "✅ Verified true",
       "verification": "The local KB confirms real-world assistive AI use in medical imaging and prioritization; it does not imply clinician replacement.",
       "confidence": 0.94,
       "source": "local-kb:health-ai-001"
     },
     {
-      "claim": "The FDA reviews these systems carefully, so full autonomy isn’t happening anytime soon.",
+      "claim": "And the regulatory barriers are huge. The FDA reviews these systems carefully, so full autonomy isn’t happening anytime soon.",
+      "status": "✅ Verified true",
+      "verification": "The local KB confirms FDA oversight of qualifying AI/ML-enabled medical devices; the statement that 'full autonomy isn't happening anytime soon' is predictive rather than verifiable.",
+      "confidence": 0.95,
+      "source": "local-kb:health-ai-002"
+    },
+    {
+      "claim": "Smart triage chatbots on hospital websites or apps, helping patients figure out next steps before seeing a doctor.",
+      "status": "✅ Verified true",
+      "verification": "The local KB supports patient-facing symptom-checking and triage tools, though capabilities and clinical oversight differ by deployment.",
+      "confidence": 0.86,
+      "source": "local-kb:health-ai-005"
+    },
+    {
+      "claim": "Data privacy and bias are major hurdles. AI learns from existing clinical data, which may be skewed.",
+      "status": "✅ Verified true",
+      "verification": "The local KB supports both privacy risk and dataset-bias concerns in healthcare AI, while the severity varies by system and dataset.",
+      "confidence": 0.92,
+      "source": "local-kb:health-ai-004"
+    },
+    {
+      "claim": "Efficiency and clinician support. Hospitals want faster reads and fewer errors.",
       "status": "❓ Unverifiable",
       "verification": "No sufficiently relevant fact was retrieved from the local knowledge base.",
       "confidence": 0.35,
       "source": "local-kb:no-match"
+    },
+    {
+      "claim": "Plus, the pandemic accelerated digital health adoption, including AI tools.",
+      "status": "✅ Verified true",
+      "verification": "The local KB supports accelerated digital-health adoption during the pandemic; attributing the entire AI adoption trend to the pandemic would be too broad.",
+      "confidence": 0.88,
+      "source": "local-kb:health-ai-003"
     }
   ]
 }

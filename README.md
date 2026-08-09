@@ -1,7 +1,7 @@
 # Podcast Content Agent
 
-A small, inspectable AI workflow that turns podcast transcript JSON into editorial
-content and claim-level fact checks. It can use OpenAI, a local Ollama model, or a
+A small, inspectable AI workflow that turns `.json` or timestamped `.txt` podcast
+transcripts into editorial content and claim-level fact checks. It can use OpenAI, a local Ollama model, or a
 credential-free deterministic analyzer, and it always produces the same structured
 JSON and Markdown contracts.
 
@@ -27,7 +27,7 @@ provider failure and processes the episode with its deterministic fallback.
 ## Architecture
 
 ```text
-Episode JSON
+Episode JSON or TXT
     |
     v
 PodcastAgent
@@ -55,11 +55,12 @@ file inventory.
 |---|---|
 | [`app/`](app/) | Agent orchestration, provider adapters, models, retrieval, logging, and rendering |
 | [`data/`](data/) | Input data boundary and episode fixtures |
-| [`data/input/`](data/input/) | Transcript JSON files consumed by the CLI |
+| [`data/input/`](data/input/) | JSON and timestamped text transcripts consumed by the CLI |
 | [`docs/`](docs/) | Design and deployment documentation |
 | [`kb/`](kb/) | Curated local facts used for retrieval-backed verification |
 | [`logs/`](logs/) | Runtime event logs; generated log files are not source documentation |
 | [`outputs/`](outputs/) | Generated JSON and Markdown episode analyses |
+| [`scripts/`](scripts/) | Standalone deliverable validation and repository utilities |
 | [`tests/`](tests/) | Unit and behavior tests |
 | [`.github/`](.github/) | Dependency automation and GitHub repository configuration |
 | [`.github/workflows/`](.github/workflows/) | CI, rubric, tagging, and release workflows |
@@ -109,7 +110,7 @@ python -m app.main \
 
 | Option | Default | Description |
 |---|---|---|
-| `--input` | `data/input` | One episode JSON file or a directory of JSON files |
+| `--input` | `data/input` | One `.json`/`.txt` transcript or a directory containing either format |
 | `--output` | `outputs` | Destination for generated JSON and Markdown |
 | `--kb` | `kb/facts.json` | Local verification knowledge base |
 | `--logs` | `logs` | Destination for `agent.log` |
@@ -183,9 +184,11 @@ This validation is important for downstream consumers: a successful HTTP respons
 is not treated as a successful episode unless its payload satisfies the editorial
 contract.
 
-## Input contract
+## Input contracts
 
-Each file under `data/input/` has this shape:
+### JSON
+
+JSON inputs use this shape:
 
 ```json
 {
@@ -206,6 +209,26 @@ Each file under `data/input/` has this shape:
 
 Required transcript fields are `timestamp`, `speaker`, `section`, and `text`.
 Episode IDs should be unique and safe to use in filenames.
+
+### Plain text
+
+Text inputs accept optional metadata followed by timestamped dialogue:
+
+```text
+Episode ID: ep004
+Title: Reliable AI Workflows
+Host: Maya Chen
+Guests: Luis Rivera
+
+[00:00] Maya: Welcome to the show.
+[00:14] Luis: Thanks for having me.
+[00:30] Maya: What should listeners know?
+```
+
+`Episode ID`, `Title`, `Host`, and `Guests` are optional. Without them, the parser
+uses the filename stem for the ID/title, the first speaker as host, and remaining
+speakers as guests. It accepts `MM:SS` and `HH:MM:SS` timestamps. Metadata must
+appear before the first transcript line.
 
 ## Output contract
 
@@ -284,6 +307,7 @@ Run the fast checks:
 python -m ruff check app tests
 python -m ruff format --check app tests
 python -m pytest -q
+python scripts/validate_deliverables.py
 ```
 
 Or use the corresponding Make targets:
@@ -321,7 +345,10 @@ ECS Fargate for stateless episode workers, CloudWatch for telemetry, and Bedrock
 an approved model provider for inference. It includes retry, idempotency, DLQ,
 security, and cost controls.
 
-See [`docs/deployment_strategy.md`](docs/deployment_strategy.md) for the full design.
+The assignment response in [`docs/deployment_strategy.md`](docs/deployment_strategy.md)
+is below the required 500-word maximum. See
+[`docs/production_architecture_notes.md`](docs/production_architecture_notes.md) for
+the extended design.
 
 ## Troubleshooting
 
@@ -337,8 +364,8 @@ When using the Compose profile, use `OLLAMA_URL=http://ollama:11434`. The
 
 ### No output files are created
 
-Confirm that `--input` points to a JSON file or a directory containing JSON files.
-The CLI exits with a clear message when no inputs are found.
+Confirm that `--input` points to a `.json`/`.txt` file or a directory containing
+one of those formats. The CLI exits with a clear message when no inputs are found.
 
 ### A claim is unexpectedly unverifiable
 

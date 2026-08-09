@@ -7,7 +7,8 @@ than the repository's root README.
 
 | File | Description |
 |---|---|
-| [`deployment_strategy.md`](deployment_strategy.md) | Proposed AWS production architecture, scaling model, reliability controls, security, and cost strategy |
+| [`deployment_strategy.md`](deployment_strategy.md) | Assignment-compliant AWS response capped below 500 words |
+| [`production_architecture_notes.md`](production_architecture_notes.md) | Extended service, security, reliability, cost, and delivery design notes |
 
 ## Documentation conventions
 
