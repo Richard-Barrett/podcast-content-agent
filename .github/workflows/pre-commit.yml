@@ -26,7 +26,7 @@ jobs:
           cache-dependency-path: requirements-dev.txt
 
       - name: Install development dependencies
-        run: make deps
+        run: make install-dev
 
       - name: Run pre-commit against all files
         run: make pre-commit
