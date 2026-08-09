@@ -8,14 +8,14 @@ evidence.
 
 | Path | Description |
 |---|---|
-| [`input/`](input/) | Episode metadata and timestamped podcast transcripts consumed by the CLI |
+| [`input/`](input/) | JSON or text episode metadata and timestamped transcripts consumed by the CLI |
 
 Generated analyses do not belong here; they are written to `../outputs/`. Facts
 used as independent verification evidence belong in `../kb/`.
 
 ## Data handling conventions
 
-- Use UTF-8 JSON.
+- Use UTF-8 JSON or the documented timestamped text format.
 - Keep one episode per file.
 - Give each episode a stable, unique `episode_id`.
 - Preserve timestamps and transcript wording when editing fixtures.

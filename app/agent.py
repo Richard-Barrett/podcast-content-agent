@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from .factcheck import LocalKnowledgeBase
+from .input import load_episode
 from .llm import LLMClient, LLMError
 from .logger import log_event
 from .models import Claim, EpisodeAnalysis, Quote
@@ -37,7 +38,7 @@ class PodcastAgent:
         self.llm = llm or LLMClient()
 
     def run_file(self, path: Path) -> EpisodeAnalysis:
-        episode = json.loads(path.read_text(encoding="utf-8"))
+        episode = load_episode(path)
         eid = episode["episode_id"]
         log_event(
             self.logger,
@@ -71,7 +72,7 @@ class PodcastAgent:
                 )
                 user = json.dumps(episode, ensure_ascii=False)
                 analysis = self.llm.complete_json(SYSTEM_PROMPT, user)
-                self._validate_llm_analysis(analysis)
+                self._validate_llm_analysis(analysis, episode)
                 log_event(
                     self.logger,
                     "llm_analysis_completed",
@@ -124,7 +125,7 @@ class PodcastAgent:
         return result
 
     @staticmethod
-    def _validate_llm_analysis(data: dict) -> None:
+    def _validate_llm_analysis(data: dict, episode: dict) -> None:
         required = {"summary", "top_takeaways", "notable_quotes", "topics", "claims"}
         if not required <= set(data):
             raise ValueError(f"Missing keys: {required - set(data)}")
@@ -137,6 +138,20 @@ class PodcastAgent:
             )
         if len(data["top_takeaways"]) < 5:
             raise ValueError("Expected at least five takeaways")
+        transcript_quotes = {
+            (turn["timestamp"], turn["speaker"], turn["text"])
+            for turn in episode["transcript"]
+        }
+        for quote in data["notable_quotes"]:
+            if not isinstance(quote, dict):
+                raise TypeError("Expected each notable quote to be an object")
+            quote_key = (
+                quote.get("timestamp"),
+                quote.get("speaker"),
+                quote.get("text"),
+            )
+            if quote_key not in transcript_quotes:
+                raise ValueError("Notable quote does not match the transcript exactly")
 
     @staticmethod
     def _heuristic_analysis(ep: dict) -> dict:
